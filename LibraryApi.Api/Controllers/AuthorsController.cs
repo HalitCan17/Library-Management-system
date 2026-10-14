@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using LibraryApi.Domain.Entities;
 using LibraryApi.Services.Dtos;
+using LibraryApi.Data;
 
 namespace LibraryApi.Api.Controllers;
 
@@ -8,12 +9,11 @@ namespace LibraryApi.Api.Controllers;
 [Route("api/[controller]")]
 public class AuthorsController :ControllerBase
 {
-    private static readonly  List<Author> _authors= new();
-    private static int _nextId=1;
     
+    [HttpGet]
     public ActionResult<List<AuthorDto>>GetAll()
     {
-        var result =_authors
+        var result = InMemorStore.Authors
         .Select(a=> new AuthorDto(a.Id, a.FullName,a.BirthYear))
         .ToList();
         return Ok(result);
@@ -23,7 +23,7 @@ public class AuthorsController :ControllerBase
     [HttpGet("{id}")]
     public ActionResult<AuthorDto> GetById(int id)
     {
-        var author=_authors.FirstOrDefault(a=>a.Id==id);
+        var author=InMemorStore.Authors.FirstOrDefault(a=>a.Id==id);
         if(author is null ) return NotFound();
         return Ok(new AuthorDto(author.Id,author.FullName,author.BirthYear));
     }
@@ -33,12 +33,12 @@ public class AuthorsController :ControllerBase
     {
          var author = new Author
          {
-             Id=_nextId++,
+             Id=InMemorStore.NextAuthorId(),
              FullName=dto.FullName,
              BirthYear=dto.BirthYear
 
          };
-         _authors.Add(author);
+         InMemorStore.Authors.Add(author);
 
          var result = new AuthorDto(author.Id,author.FullName,author.BirthYear);
          return CreatedAtAction(nameof(GetById), new {id=author.Id}, result);
@@ -47,7 +47,7 @@ public class AuthorsController :ControllerBase
     [HttpPut("{id}")]
     public IActionResult Update(int id, UpdateAuthordDto dto)
     {
-        var author =_authors.FirstOrDefault(a=>a.Id==id);
+        var author =InMemorStore.Authors.FirstOrDefault(a=>a.Id==id);
         if(author is null ) return NotFound();
 
         author.FullName= dto.FullName;
@@ -58,10 +58,13 @@ public class AuthorsController :ControllerBase
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
-        var author =_authors.FirstOrDefault(a=>a.Id==id);
+        var author =InMemorStore.Authors.FirstOrDefault(a=>a.Id==id);
         if(author is null) return NotFound();
 
-        _authors.Remove(author);
+        if(InMemorStore.Books.Any(b=>b.AuthorId==id))
+        return Conflict("Bu yazarın kitapları var önce kitapları silin");
+
+        InMemorStore.Authors.Remove(author);
         return NoContent();
     }
 
