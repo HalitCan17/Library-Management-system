@@ -20,6 +20,11 @@ public class BooksController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int PageSize = 10)
     {
+        if(page<1) page =1;
+        if(PageSize<1) PageSize=10;
+        if(PageSize>50) PageSize=50;
+
+
         IEnumerable<Book> query = InMemorStore.Books;
         if (!string.IsNullOrWhiteSpace(search))
             query = query.Where(b => b.Title.Contains(search, StringComparison.OrdinalIgnoreCase));
